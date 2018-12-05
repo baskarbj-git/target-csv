@@ -35,7 +35,7 @@ def flatten(d, parent_key='', sep='__'):
             items.append((new_key, str(v) if type(v) is list else v))
     return dict(items)
         
-def persist_messages(delimiter, quotechar, messages):
+def persist_messages(delimiter, quotechar, file, messages):
     state = None
     schemas = {}
     key_properties = {}
@@ -43,6 +43,9 @@ def persist_messages(delimiter, quotechar, messages):
     validators = {}
 
     now = datetime.now().strftime('%Y%m%dT%H%M%S')
+
+    if file is not None:
+        os.remove(file)
 
     for message in messages:
         try:
@@ -59,6 +62,10 @@ def persist_messages(delimiter, quotechar, messages):
             validators[o['stream']].validate(o['record'])
 
             filename = o['stream'] + '-' + now + '.csv'
+
+            if file is not None:
+                filename = file
+
             file_is_empty = (not os.path.isfile(filename)) or os.stat(filename).st_size == 0
 
             flattened_record = flatten(o['record'])
@@ -122,6 +129,9 @@ def send_usage_stats():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', help='Config file')
+    parser.add_argument('-d', '--delimiter', help='Delimiter character')
+    parser.add_argument('-q', '--quotechar', help='Quote character')
+    parser.add_argument('-f', '--file', help='Output file')
     args = parser.parse_args()
 
     if args.config:
@@ -129,6 +139,13 @@ def main():
             config = json.load(input_json)
     else:
         config = {}
+
+    if args.delimiter:
+        config['delimiter'] = args.delimiter
+    if args.quotechar:
+        config['quotechar'] = args.delimiter
+    if args.delimiter:
+        config['file'] = args.file
 
     if not config.get('disable_collection', False):
         logger.info('Sending version information to singer.io. ' +
@@ -139,6 +156,7 @@ def main():
     input_messages = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
     state = persist_messages(config.get('delimiter', ','),
                              config.get('quotechar', '"'),
+                             config.get('file', None),
                              input_messages)
 
     emit_state(state)

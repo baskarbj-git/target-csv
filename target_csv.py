@@ -45,7 +45,10 @@ def persist_messages(delimiter, quotechar, file, messages):
     now = datetime.now().strftime('%Y%m%dT%H%M%S')
 
     if file is not None:
-        os.remove(file)
+        try:
+            os.remove(file)
+        except FileNotFoundError:
+            pass
 
     for message in messages:
         try:
@@ -140,11 +143,13 @@ def main():
     else:
         config = {}
 
+    logger.info(f"args: {args}")
+
     if args.delimiter:
         config['delimiter'] = args.delimiter
     if args.quotechar:
         config['quotechar'] = args.delimiter
-    if args.delimiter:
+    if args.file:
         config['file'] = args.file
 
     if not config.get('disable_collection', False):
@@ -152,6 +157,8 @@ def main():
                     'To disable sending anonymous usage data, set ' +
                     'the config parameter "disable_collection" to true')
         threading.Thread(target=send_usage_stats).start()
+
+    logger.info(f"config: {config}")
 
     input_messages = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
     state = persist_messages(config.get('delimiter', ','),

@@ -148,7 +148,7 @@ def main():
     if args.delimiter:
         config['delimiter'] = args.delimiter
     if args.quotechar:
-        config['quotechar'] = args.delimiter
+        config['quotechar'] = args.quotechar
     if args.file:
         config['file'] = args.file
 

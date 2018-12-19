@@ -89,8 +89,12 @@ def persist_messages(delimiter, quotechar, file, messages):
                                         extrasaction='ignore',
                                         delimiter=delimiter,
                                         quotechar=quotechar)
-                if file_is_empty:
+                if file_is_empty:                    
                     writer.writeheader()
+                
+                for header in headers:
+                    if header not in flattened_record:
+                        flattened_record[header] = None
 
                 writer.writerow(flattened_record)
 

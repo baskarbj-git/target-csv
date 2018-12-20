@@ -20,10 +20,11 @@ logger = singer.get_logger()
 
 def emit_state(state):
     if state is not None:
-        line = json.dumps(state)
-        logger.debug('Emitting state {}'.format(line))
-        sys.stdout.write("{}\n".format(line))
-        sys.stdout.flush()
+        pass
+        # line = json.dumps(state)
+        # logger.debug('Emitting state {}'.format(line))
+        # sys.stdout.write("{}\n".format(line))
+        # sys.stdout.flush()
 
 def extract_header_names(property=None, parent_key='', sep='__', selected=False):
     items = []
@@ -47,7 +48,7 @@ def flatten(d, parent_key='', sep='__'):
             items.append((new_key, str(v) if type(v) is list else v))
     return dict(items)
         
-def persist_messages(delimiter, quotechar, file, messages):
+def persist_messages(delimiter, quotechar, messages):
     state = None
     schemas = {}
     key_properties = {}
@@ -58,11 +59,7 @@ def persist_messages(delimiter, quotechar, file, messages):
 
     now = datetime.now().strftime('%Y%m%dT%H%M%S')
 
-    if file is not None:
-        try:
-            os.remove(file)
-        except FileNotFoundError:
-            pass
+    header_writes = {}
 
     for message in messages:
         try:
@@ -80,43 +77,27 @@ def persist_messages(delimiter, quotechar, file, messages):
 
             filename = o['stream'] + '-' + now + '.csv'
 
-            if file is not None:
-                filename = file
-
-            file_is_empty = (not os.path.isfile(filename)) or os.stat(filename).st_size == 0
-
             flattened_record = flatten(o['record'])
 
-            
-            with open(filename, 'a') as csvfile:
-                if o['stream'] not in headers:                 
-                    if not file_is_empty:            
-                        with open(filename, 'r') as csvfile:
-                            reader = csv.reader(csvfile,
-                                            delimiter=delimiter,
-                                            quotechar=quotechar)
-                            first_line = next(reader)
-                            headers[o['stream']] = first_line if first_line else flattened_record.keys()
-                    else:            
-                        headers[o['stream']] = extract_header_names(property = schemas[o['stream']]['properties'])
-                    logger.info(f"generated headers: {headers[o['stream']]}")
+            if o['stream'] not in headers:                          
+                headers[o['stream']] = extract_header_names(property = schemas[o['stream']]['properties'])
+                logger.info(f"generated headers: {headers[o['stream']]}")
 
-                writer = csv.DictWriter(csvfile,
-                                        headers[o['stream']],
-                                        extrasaction='ignore',
-                                        delimiter=delimiter,
-                                        quotechar=quotechar)
-                if file_is_empty:
-                    
-                    header_names = headers[o['stream']]
-                    writer.writeheader()
+            writer = csv.DictWriter(sys.stdout,
+                                    headers[o['stream']],
+                                    extrasaction='ignore',
+                                    delimiter=delimiter,
+                                    quotechar=quotechar)
+            if o['stream'] not in header_writes:
+                header_writes[o['stream']] = True
+                writer.writeheader()
 
-                for header in headers[o['stream']]:
-                    if header not in flattened_record:
-                        flattened_record[header] = None
-            
+            for header in headers[o['stream']]:
+                if header not in flattened_record:
+                    flattened_record[header] = None
+        
 
-                writer.writerow(flattened_record)
+            writer.writerow(flattened_record)
 
             state = None
         elif message_type == 'STATE':
@@ -158,7 +139,6 @@ def main():
     parser.add_argument('-c', '--config', help='Config file')
     parser.add_argument('-d', '--delimiter', help='Delimiter character')
     parser.add_argument('-q', '--quotechar', help='Quote character')
-    parser.add_argument('-f', '--file', help='Output file')
     args = parser.parse_args()
 
     if args.config:
@@ -173,8 +153,6 @@ def main():
         config['delimiter'] = args.delimiter
     if args.quotechar:
         config['quotechar'] = args.quotechar
-    if args.file:
-        config['file'] = args.file
 
     if not config.get('disable_collection', False):
         logger.info('Sending version information to singer.io. ' +
@@ -186,11 +164,10 @@ def main():
 
     input_messages = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
     state = persist_messages(config.get('delimiter', ','),
-                             config.get('quotechar', '"'),
-                             config.get('file', None),
+                             config.get('quotechar', '"'),                             
                              input_messages)
 
-    emit_state(state)
+    #emit_state(state)
     logger.debug("Exiting normally")
 
 

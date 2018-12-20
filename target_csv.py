@@ -87,8 +87,7 @@ def persist_messages(delimiter, quotechar, messages):
                                     headers[o['stream']],
                                     extrasaction='ignore',
                                     delimiter=delimiter,
-                                    quotechar=quotechar,
-                                    quoting=csv.QUOTE_MINIMAL)
+                                    quotechar=quotechar)
             if o['stream'] not in header_writes:
                 header_writes[o['stream']] = True
                 writer.writeheader()
@@ -96,6 +95,10 @@ def persist_messages(delimiter, quotechar, messages):
             for header in headers[o['stream']]:
                 if header not in flattened_record:
                     flattened_record[header] = None
+                else:
+                    if isinstance(flattened_record[header], str):
+                        flattened_record[header] = flattened_record[header].encode("unicode_escape").decode("utf-8")
+
         
 
             writer.writerow(flattened_record)

@@ -25,6 +25,21 @@ def emit_state(state):
         sys.stdout.write("{}\n".format(line))
         sys.stdout.flush()
 
+def extract_header_names(property=None, parent_key='', sep='__'):
+    items = []
+    for index, key in enumerate(property):
+        logger.info(f"asdfsadf: {index} - {key}")
+        value = property[key]
+        new_key = parent_key + sep + key if parent_key else key    
+        if 'properties' in value:
+            items.extend(extract_header_names(property=value['properties'], parent_key=new_key, sep=sep))
+        else:        
+            items.append(new_key)
+    return items
+
+def extract_header_names_from_schema(schema, sep='__'):
+    return extract_header_names(property=schema['properties'], sep=sep)
+
 def flatten(d, parent_key='', sep='__'):
     items = []
     for k, v in d.items():
@@ -41,6 +56,8 @@ def persist_messages(delimiter, quotechar, file, messages):
     key_properties = {}
     headers = {}
     validators = {}
+
+    logger.info("do persists")
 
     now = datetime.now().strftime('%Y%m%dT%H%M%S')
 
@@ -73,28 +90,32 @@ def persist_messages(delimiter, quotechar, file, messages):
 
             flattened_record = flatten(o['record'])
 
-            if o['stream'] not in headers and not file_is_empty:
-                with open(filename, 'r') as csvfile:
-                    reader = csv.reader(csvfile,
-                                        delimiter=delimiter,
-                                        quotechar=quotechar)
-                    first_line = next(reader)
-                    headers[o['stream']] = first_line if first_line else flattened_record.keys()
-            else:
-                headers[o['stream']] = flattened_record.keys()
-
+            
             with open(filename, 'a') as csvfile:
+                if o['stream'] not in headers:                 
+                    if not file_is_empty:            
+                        with open(filename, 'r') as csvfile:
+                            reader = csv.reader(csvfile,
+                                            delimiter=delimiter,
+                                            quotechar=quotechar)
+                            first_line = next(reader)
+                            headers[o['stream']] = first_line if first_line else flattened_record.keys()
+                    else:            
+                        headers[o['stream']] = extract_header_names(property = schemas[o['stream']]['properties'])
                 writer = csv.DictWriter(csvfile,
                                         headers[o['stream']],
                                         extrasaction='ignore',
                                         delimiter=delimiter,
                                         quotechar=quotechar)
-                if file_is_empty:                    
+                if file_is_empty:
+                    
+                    header_names = headers[o['stream']]
                     writer.writeheader()
-                
-                for header in headers:
+
+                for header in headers[o['stream']]:
                     if header not in flattened_record:
                         flattened_record[header] = None
+            
 
                 writer.writerow(flattened_record)
 

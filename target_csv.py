@@ -87,7 +87,8 @@ def persist_messages(delimiter, quotechar, messages):
                                     headers[o['stream']],
                                     extrasaction='ignore',
                                     delimiter=delimiter,
-                                    quotechar=quotechar)
+                                    quotechar=quotechar,
+                                    quoting=csv.QUOTE_MINIMAL)
             if o['stream'] not in header_writes:
                 header_writes[o['stream']] = True
                 writer.writeheader()

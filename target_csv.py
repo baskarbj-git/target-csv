@@ -25,20 +25,17 @@ def emit_state(state):
         sys.stdout.write("{}\n".format(line))
         sys.stdout.flush()
 
-def extract_header_names(property=None, parent_key='', sep='__'):
+def extract_header_names(property=None, parent_key='', sep='__', selected=False):
     items = []
-    for index, key in enumerate(property):
-        logger.info(f"asdfsadf: {index} - {key}")
+    for index, key in enumerate(property):    
         value = property[key]
-        new_key = parent_key + sep + key if parent_key else key    
-        if 'properties' in value:
-            items.extend(extract_header_names(property=value['properties'], parent_key=new_key, sep=sep))
-        else:        
-            items.append(new_key)
+        if selected or ('selected' in value and value['selected'] is True):
+            new_key = parent_key + sep + key if parent_key else key    
+            if 'properties' in value:
+                items.extend(extract_header_names(property=value['properties'], parent_key=new_key, sep=sep, selected=True))
+            else:        
+                items.append(new_key)
     return items
-
-def extract_header_names_from_schema(schema, sep='__'):
-    return extract_header_names(property=schema['properties'], sep=sep)
 
 def flatten(d, parent_key='', sep='__'):
     items = []
@@ -102,6 +99,8 @@ def persist_messages(delimiter, quotechar, file, messages):
                             headers[o['stream']] = first_line if first_line else flattened_record.keys()
                     else:            
                         headers[o['stream']] = extract_header_names(property = schemas[o['stream']]['properties'])
+                    logger.info(f"generated headers: {headers[o['stream']]}")
+
                 writer = csv.DictWriter(csvfile,
                                         headers[o['stream']],
                                         extrasaction='ignore',

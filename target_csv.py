@@ -30,12 +30,12 @@ def extract_header_names(property=None, parent_key='', sep='__', selected=False)
     items = []
     for index, key in enumerate(property):    
         value = property[key]
-#        if selected or ('selected' in value and value['selected'] is True):
-        new_key = parent_key + sep + key if parent_key else key    
-        if 'properties' in value:
-            items.extend(extract_header_names(property=value['properties'], parent_key=new_key, sep=sep, selected=True))
-        else:        
-            items.append(new_key)
+        if selected or value.get('selected', True):
+            new_key = parent_key + sep + key if parent_key else key    
+            if 'properties' in value:
+                items.extend(extract_header_names(property=value['properties'], parent_key=new_key, sep=sep, selected=True))
+            else:        
+                items.append(new_key)
     return items
 
 def flatten(d, parent_key='', sep='__'):

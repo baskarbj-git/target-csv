@@ -1,3 +1,7 @@
+# WARNING 
+
+This target has been modified to ouput to stdout instead of a file. Consequently if you have more than one stream you might get unexpected results
+
 # target-csv
 
 A [Singer](https://singer.io) target that writes data to CSV files.
